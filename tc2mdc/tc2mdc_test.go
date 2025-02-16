@@ -35,7 +35,7 @@ func TestInputMultiNoComments(t *testing.T) {
 	var input = []string{" something", "", " something else"}
 	// ## WHEN Convert()
 	output, err := Convert(input)
-	// ## THEN output is <empty>
+	// ## THEN output is '<empty>'
 	require.Empty(t, output, "output must be empty")
 	require.Empty(t, err, "must be no error")
 }
@@ -43,17 +43,22 @@ func TestInputMultiNoComments(t *testing.T) {
 func TestInputContainsOLCbutNoMarkers(t *testing.T) {
 	// > Empty Input
 	// # Convert() returns empty output on input with OLC but not one space between MD markers
-	// ## GIVEN Input is "// Scenario","//- point","//  - point","// #header","// ##  header"
+	// ## GIVEN Input is:
 	var input = []string{
-		OLC + " Scenario",   // no MD marker
-		OLC + "- point",     // no space after OLC
-		OLC + "  - point",   // two spaces after OLC
-		OLC + " #header",    // no space after MD marker
-		OLC + " ##  header", // two spaces after MD marker
+		// - "// Scenario"   (no MD marker)
+		OLC + " Scenario",
+		// - "//- point"     (no space after OLC)
+		OLC + "- point",
+		// - "//  - point"   (two spaces after OLC)
+		OLC + "  - point",
+		// - "// #header"    (no space after MD marker)
+		OLC + " #header",
+		// - "// ##  header" (two spaces after MD marker)
+		OLC + " ##  header",
 	}
 	// ## WHEN Convert()
 	output, err := Convert(input)
-	// ## THEN output is <empty>
+	// ## THEN output is '<empty>'
 	require.Empty(t, err, "must be no error")
 	require.Empty(t, output, "output must be empty")
 }
@@ -61,11 +66,13 @@ func TestInputContainsOLCbutNoMarkers(t *testing.T) {
 func TestInputScenarioHeader(t *testing.T) {
 	// > MD Markers
 	// # Convert() returns header(3) line on input started with '#'
-	// ## GIVEN Input is "// # Scenario"
+	// ## GIVEN Input is
+	// - "// # Scenario"
 	var input = []string{OLC + " # Scenario"}
 	// ## WHEN Convert()
 	output, err := Convert(input)
-	// ## THEN output: "### Scenario"
+	// ## THEN output:
+	// - "### Scenario"
 	require.Empty(t, err, "must be no error")
 	require.Equal(t, []string{"### Scenario"}, output)
 }
@@ -73,11 +80,13 @@ func TestInputScenarioHeader(t *testing.T) {
 func TestInputStepHeader(t *testing.T) {
 	// > MD Markers
 	// # Convert() returns header(4) line on input started with '##'
-	// ## GIVEN Input is "// ## GIVEN"
+	// ## GIVEN Input is
+	// - "// ## GIVEN"
 	var input = []string{OLC + " ## GIVEN"}
 	// ## WHEN Convert()
 	output, err := Convert(input)
-	// ## THEN output: "#### GIVEN"
+	// ## THEN output:
+	// - "#### GIVEN"
 	require.Empty(t, err, "must be no error")
 	require.Equal(t, []string{"#### GIVEN"}, output)
 }
@@ -85,29 +94,46 @@ func TestInputStepHeader(t *testing.T) {
 func TestInputBulletNote(t *testing.T) {
 	// > MD Markers
 	// # Convert() returns line as is on input started with '-' and '>'
-	// ## GIVEN Input is "// > Group", "// - Step"
+	// ## GIVEN Input is:
 	var input = []string{
+		// - "// > Group"
 		OLC + " > Group",
+		// - "// - Step"
 		OLC + " - Step ",
 	}
 	// ## WHEN Convert()
 	output, err := Convert(input)
-	// ## THEN output: "> Group", "- Step"
+	// ## THEN output is:
 	require.Empty(t, err, "must be no error")
-	require.Equal(t, []string{"> Group", "- Step"}, output)
+	require.Equal(
+		t,
+		[]string{
+			// - "> Group"
+			"> Group",
+			// - "- Step"
+			"- Step",
+		},
+		output)
 }
 
 func TestInputBullet2(t *testing.T) {
 	// > MD Markers
 	// # Convert() returns shifted (2, 4 spaces) line on input started with '--', '---'
-	// ## GIVEN Input is "// -- Step 2", "// --- Step3"
+	// ## GIVEN Input is
 	var input = []string{
+		// - "// -- Step 2"
 		OLC + " -- Step2 ",
+		// - "// --- Step3"
 		OLC + " --- Step3 ",
 	}
 	// ## WHEN Convert()
 	output, err := Convert(input)
-	// ## THEN output: "  - Step2", "    - Step3"
+	// ## THEN output is:
 	require.Empty(t, err, "must be no error")
-	require.Equal(t, []string{"  - Step2", "    - Step3"}, output)
+	require.Equal(t, []string{
+		// - "__- Step2"
+		"  - Step2",
+		// - "____- Step3"
+		"    - Step3",
+	}, output)
 }
