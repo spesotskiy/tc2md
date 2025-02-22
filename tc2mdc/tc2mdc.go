@@ -10,6 +10,9 @@ import (
 // One line comment
 const OLC string = "//"
 
+// Link to the top of MD file
+const TopLink string = "[top](#top)"
+
 // Converts multi line text with one line comments into a MarkDown text
 func Convert(comments []string) ([]string, error) {
 
@@ -22,35 +25,51 @@ func Convert(comments []string) ([]string, error) {
 
 	fmt.Println("Start converting...")
 	var mdText []string
-	var convertedLine string
-	var isConverted bool
+	var trimmedLine, convertedLine string
+	var isConverted, isFuncStarted bool
 	rePackage, _ := regexp.Compile(`^package\s(?P<name>\w+)`)
 	reFunc, _ := regexp.Compile(`^func\s(?P<name>Test\w+)\(t \*testing\.T\)`)
 	reMarker, _ := regexp.Compile(`^\s(#|##|>|-|--|---)\s[^\s]`) // all MD markers to search for
-	for _, line := range comments {
-		line = strings.TrimSpace(line)
+	for _, origLine := range comments {
+		trimmedLine = strings.TrimSpace(origLine)
 		switch {
-		case strings.HasPrefix(line, "package"):
+		case strings.HasPrefix(origLine, "package"):
 			{
-				result := getMatchesMap(rePackage, line)
+				result := getMatchesMap(rePackage, origLine)
 				convertedLine = "## `" + result["name"] + "`"
 				isConverted = result["name"] != ""
+				if isConverted {
+					mdText = append(mdText, convertedLine)
+				}
 			}
-		case strings.HasPrefix(line, "func"):
+		case strings.HasPrefix(origLine, "func"): // start of func
 			{
-				result := getMatchesMap(reFunc, line)
+				result := getMatchesMap(reFunc, origLine)
 				convertedLine = "#### `" + result["name"] + "`"
 				isConverted = result["name"] != ""
+				if isConverted {
+					mdText = append(mdText, "---")
+					mdText = append(mdText, convertedLine)
+					isFuncStarted = true
+				}
 			}
-		case strings.HasPrefix(line, OLC):
+		case strings.HasPrefix(origLine, "}"): // end of func
 			{
-				convertedLine, isConverted = convertLineComment(line, reMarker)
+				if isFuncStarted {
+					isFuncStarted = false
+					mdText = append(mdText, "")
+					mdText = append(mdText, TopLink)
+				}
+			}
+		case strings.HasPrefix(trimmedLine, OLC):
+			{
+				convertedLine, isConverted = convertLineComment(trimmedLine, reMarker)
+				if isConverted {
+					mdText = append(mdText, convertedLine)
+				}
 			}
 		default:
 			isConverted = false
-		}
-		if isConverted {
-			mdText = append(mdText, convertedLine)
 		}
 	}
 	return mdText, nil

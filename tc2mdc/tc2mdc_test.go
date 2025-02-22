@@ -140,11 +140,17 @@ func TestInputBullet2(t *testing.T) {
 
 func TestGoFuncNameAsHeader(t *testing.T) {
 	// > Header, Go
-	// # Convert() returns scenario header on input with test func name
+	// # Convert() returns scenario header with separator and link to the top on input with test func name
 	// ## GIVEN Input is
 	var input = []string{
 		// - "func TestSomething(t *testing.T) {"
 		"func TestSomething(t *testing.T) {",
+		// - "  if x {"
+		"  if x {",
+		// - "  }" // must be skipped as indented
+		"  }",
+		// - "}" // the func end as not indented
+		"}",
 	}
 
 	// ## WHEN Convert()
@@ -152,8 +158,13 @@ func TestGoFuncNameAsHeader(t *testing.T) {
 	// ## THEN output is:
 	require.Empty(t, err, "must be no error")
 	require.Equal(t, []string{
+		// - "---"
+		"---",
 		// - "#### `TestSomething`"
 		"#### `TestSomething`",
+		"",
+		// - "[top](#top)"
+		"[top](#top)",
 	}, output)
 }
 
@@ -201,10 +212,16 @@ func TestGoTwoTestsWithPackage(t *testing.T) {
 		// - "## `somePackage`"
 		"## `somePackage`",
 		// - "#### `TestSomething1`"
+		"---",
 		"#### `TestSomething1`",
 		"### Scenario1",
+		"",
+		"[top](#top)",
 		// - "#### `TestSomething2`"
+		"---",
 		"#### `TestSomething2`",
 		"### Scenario2",
+		"",
+		"[top](#top)",
 	}, output)
 }
