@@ -137,3 +137,74 @@ func TestInputBullet2(t *testing.T) {
 		"    - Step3",
 	}, output)
 }
+
+func TestGoFuncNameAsHeader(t *testing.T) {
+	// > Header, Go
+	// # Convert() returns scenario header on input with test func name
+	// ## GIVEN Input is
+	var input = []string{
+		// - "func TestSomething(t *testing.T) {"
+		"func TestSomething(t *testing.T) {",
+	}
+
+	// ## WHEN Convert()
+	output, err := Convert(input)
+	// ## THEN output is:
+	require.Empty(t, err, "must be no error")
+	require.Equal(t, []string{
+		// - "#### `TestSomething`"
+		"#### `TestSomething`",
+	}, output)
+}
+
+func TestGoPackageNameAsHeader(t *testing.T) {
+	// > Header, Go
+	// # Convert() returns package header on input with package name
+	// ## GIVEN Input is
+	var input = []string{
+		// - "package somePackage"
+		"package somePackage",
+	}
+
+	// ## WHEN Convert()
+	output, err := Convert(input)
+	// ## THEN output is:
+	require.Empty(t, err, "must be no error")
+	require.Equal(t, []string{
+		// - "## `somePackage`"
+		"## `somePackage`",
+	}, output)
+}
+
+func TestGoTwoTestsWithPackage(t *testing.T) {
+	// > Header, Go
+	// # Convert() returns 2 test headers on input with 2 tests
+	// ## GIVEN Input is
+	var input = []string{
+		// - "package somePackage"
+		"package somePackage",
+		// - "func TestSomething1(t *testing.T) {"
+		"func TestSomething1(t *testing.T) {",
+		OLC + " # Scenario1",
+		"}",
+		// - "func TestSomething2(t *testing.T) {"
+		"func TestSomething2(t *testing.T) {",
+		OLC + " # Scenario2",
+		"}",
+	}
+
+	// ## WHEN Convert()
+	output, err := Convert(input)
+	// ## THEN output is:
+	require.Empty(t, err, "must be no error")
+	require.Equal(t, []string{
+		// - "## `somePackage`"
+		"## `somePackage`",
+		// - "#### `TestSomething1`"
+		"#### `TestSomething1`",
+		"### Scenario1",
+		// - "#### `TestSomething2`"
+		"#### `TestSomething2`",
+		"### Scenario2",
+	}, output)
+}
