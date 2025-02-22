@@ -138,6 +138,25 @@ func TestInputBullet2(t *testing.T) {
 	}, output)
 }
 
+func TestGoPackageNameAsHeader(t *testing.T) {
+	// > Header, Go
+	// # Convert() returns package header on input with package name
+	// ## GIVEN Input is
+	var input = []string{
+		// - "package somePackage"
+		"package somePackage",
+	}
+
+	// ## WHEN Convert()
+	output, err := Convert(input)
+	// ## THEN output is:
+	require.Empty(t, err, "must be no error")
+	require.Equal(t, []string{
+		// - "## `somePackage`"
+		"## `somePackage`",
+	}, output)
+}
+
 func TestGoFuncNameAsHeader(t *testing.T) {
 	// > Header, Go
 	// # Convert() returns scenario header with separator and link to the top on input with test func name
@@ -163,27 +182,8 @@ func TestGoFuncNameAsHeader(t *testing.T) {
 		// - "#### `TestSomething`"
 		"#### `TestSomething`",
 		"",
-		// - "[top](#top)"
+		// - "[top]#top" - link to the top
 		"[top](#top)",
-	}, output)
-}
-
-func TestGoPackageNameAsHeader(t *testing.T) {
-	// > Header, Go
-	// # Convert() returns package header on input with package name
-	// ## GIVEN Input is
-	var input = []string{
-		// - "package somePackage"
-		"package somePackage",
-	}
-
-	// ## WHEN Convert()
-	output, err := Convert(input)
-	// ## THEN output is:
-	require.Empty(t, err, "must be no error")
-	require.Equal(t, []string{
-		// - "## `somePackage`"
-		"## `somePackage`",
 	}, output)
 }
 
@@ -215,13 +215,15 @@ func TestGoTwoTestsWithPackage(t *testing.T) {
 		"---",
 		"#### `TestSomething1`",
 		"### Scenario1",
+		// - "[top]#somePackage" - link to the package line
 		"",
-		"[top](#top)",
+		"[top](#somePackage)",
 		// - "#### `TestSomething2`"
 		"---",
 		"#### `TestSomething2`",
 		"### Scenario2",
+		// - "[top]#somePackage" - link to the package line
 		"",
-		"[top](#top)",
+		"[top](#somePackage)",
 	}, output)
 }

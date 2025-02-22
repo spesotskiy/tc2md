@@ -6,7 +6,7 @@
 #### WHEN Convert(nil)
 #### THEN error message: 'nil input'
 
-[top](#top)
+[top](#tc2mdc)
 ---
 #### `TestInputEmpty`
 > Empty Input
@@ -15,7 +15,7 @@
 #### WHEN Convert("")
 #### THEN error message: 'empty input'
 
-[top](#top)
+[top](#tc2mdc)
 ---
 #### `TestInputMultiNoComments`
 > Empty Input
@@ -24,7 +24,7 @@
 #### WHEN Convert()
 #### THEN output is '<empty>'
 
-[top](#top)
+[top](#tc2mdc)
 ---
 #### `TestInputContainsOLCbutNoMarkers`
 > Empty Input
@@ -38,7 +38,7 @@
 #### WHEN Convert()
 #### THEN output is '<empty>'
 
-[top](#top)
+[top](#tc2mdc)
 ---
 #### `TestInputScenarioHeader`
 > MD Markers
@@ -49,7 +49,7 @@
 #### THEN output:
 - "### Scenario"
 
-[top](#top)
+[top](#tc2mdc)
 ---
 #### `TestInputStepHeader`
 > MD Markers
@@ -60,7 +60,7 @@
 #### THEN output:
 - "#### GIVEN"
 
-[top](#top)
+[top](#tc2mdc)
 ---
 #### `TestInputBulletNote`
 > MD Markers
@@ -73,7 +73,7 @@
 - "> Group"
 - "- Step"
 
-[top](#top)
+[top](#tc2mdc)
 ---
 #### `TestInputBullet2`
 > MD Markers
@@ -86,7 +86,18 @@
 - "__- Step2"
 - "____- Step3"
 
-[top](#top)
+[top](#tc2mdc)
+---
+#### `TestGoPackageNameAsHeader`
+> Header, Go
+### Convert() returns package header on input with package name
+#### GIVEN Input is
+- "package somePackage"
+#### WHEN Convert()
+#### THEN output is:
+- "## `somePackage`"
+
+[top](#tc2mdc)
 ---
 #### `TestGoFuncNameAsHeader`
 > Header, Go
@@ -100,20 +111,9 @@
 #### THEN output is:
 - "---"
 - "#### `TestSomething`"
-- "[top](#top)"
+- "[top]#top" - link to the top
 
-[top](#top)
----
-#### `TestGoPackageNameAsHeader`
-> Header, Go
-### Convert() returns package header on input with package name
-#### GIVEN Input is
-- "package somePackage"
-#### WHEN Convert()
-#### THEN output is:
-- "## `somePackage`"
-
-[top](#top)
+[top](#tc2mdc)
 ---
 #### `TestGoTwoTestsWithPackage`
 > Header, Go
@@ -126,6 +126,8 @@
 #### THEN output is:
 - "## `somePackage`"
 - "#### `TestSomething1`"
+- "[top]#somePackage" - link to the package line
 - "#### `TestSomething2`"
+- "[top]#somePackage" - link to the package line
 
-[top](#top)
+[top](#tc2mdc)

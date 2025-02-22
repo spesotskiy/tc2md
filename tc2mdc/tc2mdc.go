@@ -10,9 +10,6 @@ import (
 // One line comment
 const OLC string = "//"
 
-// Link to the top of MD file
-const TopLink string = "[top](#top)"
-
 // Converts multi line text with one line comments into a MarkDown text
 func Convert(comments []string) ([]string, error) {
 
@@ -24,6 +21,7 @@ func Convert(comments []string) ([]string, error) {
 	}
 
 	fmt.Println("Start converting...")
+	var packageName string
 	var mdText []string
 	var trimmedLine, convertedLine string
 	var isConverted, isFuncStarted bool
@@ -36,8 +34,9 @@ func Convert(comments []string) ([]string, error) {
 		case strings.HasPrefix(origLine, "package"):
 			{
 				result := getMatchesMap(rePackage, origLine)
-				convertedLine = "## `" + result["name"] + "`"
-				isConverted = result["name"] != ""
+				packageName = result["name"]
+				convertedLine = "## `" + packageName + "`"
+				isConverted = packageName != ""
 				if isConverted {
 					mdText = append(mdText, convertedLine)
 				}
@@ -58,7 +57,7 @@ func Convert(comments []string) ([]string, error) {
 				if isFuncStarted {
 					isFuncStarted = false
 					mdText = append(mdText, "")
-					mdText = append(mdText, TopLink)
+					mdText = append(mdText, getLinkToTop(packageName))
 				}
 			}
 		case strings.HasPrefix(trimmedLine, OLC):
@@ -73,6 +72,13 @@ func Convert(comments []string) ([]string, error) {
 		}
 	}
 	return mdText, nil
+}
+
+func getLinkToTop(name string) string {
+	if name == "" {
+		name = "top"
+	}
+	return "[top](#" + name + ")"
 }
 
 func getMatchesMap(re *regexp.Regexp, line string) map[string]string {
