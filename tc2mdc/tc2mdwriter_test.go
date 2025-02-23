@@ -69,7 +69,7 @@ func TestWritePackageTwoMethods(t *testing.T) {
 	// ## WHEN Write()
 	mdText := Write(testData)
 
-	// ## THEN - MD text includes 11 lines:
+	// ## THEN - MD text includes 9 lines - 1 package line and 2 sets of 4 lines per a test:
 	require.Equal(t, []string{
 		// - "## `somePackage`"
 		"## `somePackage`",

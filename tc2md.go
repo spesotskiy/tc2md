@@ -5,20 +5,29 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"tc2mdc"
 )
 
 func main() {
 	fmt.Println("Convert test comments to a MD file.")
 
-	code := readTestFile("./tc2mdc/tc2mdc_test.go")
-
-	mdText, err := tc2mdc.Convert(code)
-	if err != nil {
-		log.Fatal(err)
+	testFiles := []string{
+		"./tc2mdc/tc2mdparser_test.go",
+		"./tc2mdc/tc2mdwriter_test.go",
 	}
 
-	saveToMDFile("scenario.md", mdText)
+	for i, testFile := range testFiles {
+		code := readTestFile(testFile)
+
+		testData, err := tc2mdc.Parse(code)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		mdText := tc2mdc.Write(testData)
+		saveToMDFile("scenario"+strconv.Itoa(i)+".md", mdText)
+	}
 }
 
 func readTestFile(path string) []string {
