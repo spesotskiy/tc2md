@@ -10,19 +10,36 @@ import (
 // One line comment
 const OLC string = "//"
 
+type TestMethod struct {
+	name     string
+	tags     []string
+	scenario string
+	steps    []string
+}
+type TOCLine struct {
+	index   int
+	caption string
+	link    string
+	gitLink string
+}
+
+type MDFile struct {
+	title       string
+	packageName string
+	toc         map[string]TOCLine
+	methods     []TestMethod
+}
+
 // Converts multi line text with one line comments into a MarkDown text
-func Convert(comments []string) ([]string, error) {
-
-	if len(comments) == 0 {
-		return nil, errors.New("nil input")
+func Convert(comments []string) ([]string, []string, error) {
+	errorMessage := isInputEmpty(&comments)
+	if errorMessage != "" {
+		return nil, nil, errors.New(errorMessage)
 	}
-	if len(comments) == 1 && comments[0] == "" {
-		return nil, errors.New("empty input")
-	}
-
 	fmt.Println("Start converting...")
+
 	var packageName string
-	var mdText []string
+	var mdText, toc []string
 	var isFuncStarted bool
 
 	rePackage, _ := regexp.Compile(`^package\s(?P<name>\w+)`)
@@ -33,62 +50,70 @@ func Convert(comments []string) ([]string, error) {
 		switch {
 		case strings.HasPrefix(origLine, "package"):
 			{
-				packageName, mdText = addPackageHeader(origLine, rePackage, mdText)
+				packageName = addPackageHeader(origLine, rePackage, &mdText)
 			}
 		case strings.HasPrefix(origLine, "func"): // start of func
 			{
-				isFuncStarted, mdText = addFuncHeader(origLine, reFunc, mdText)
+				isFuncStarted = addFuncHeader(origLine, reFunc, &mdText)
 			}
 		case strings.HasPrefix(origLine, "}"): // end of func
 			{
-				mdText = addTopLinkToFuncEnd(isFuncStarted, packageName, mdText)
+				addTopLinkToFuncEnd(isFuncStarted, packageName, &mdText)
 			}
 		case strings.HasPrefix(trimmedLine, OLC):
 			{
-				mdText = addOneLineComment(trimmedLine, reMarker, mdText)
+				addOneLineComment(trimmedLine, reMarker, &mdText)
 			}
 		}
 	}
-	return mdText, nil
+	return mdText, toc, nil
 }
 
-func addPackageHeader(origLine string, rePackage *regexp.Regexp, mdText []string) (string, []string) {
+func isInputEmpty(comments *[]string) string {
+	if len(*comments) == 0 {
+		return "nil input"
+	}
+	if len(*comments) == 1 && (*comments)[0] == "" {
+		return "empty input"
+	}
+	return ""
+}
+
+func addPackageHeader(origLine string, rePackage *regexp.Regexp, mdText *[]string) string {
 	result := getMatchesMap(rePackage, origLine)
 	packageName := result["name"]
 	convertedLine := "## `" + packageName + "`"
 	if packageName != "" {
-		mdText = append(mdText, convertedLine)
+		*mdText = append(*mdText, convertedLine)
 	}
-	return packageName, mdText
+	return packageName
 }
 
-func addFuncHeader(origLine string, reFunc *regexp.Regexp, mdText []string) (bool, []string) {
+func addFuncHeader(origLine string, reFunc *regexp.Regexp, mdText *[]string) bool {
 	result := getMatchesMap(reFunc, origLine)
 	convertedLine := "#### `" + result["name"] + "`"
 	if result["name"] != "" {
-		mdText = append(mdText, "---")
-		mdText = append(mdText, convertedLine)
-		isFuncStarted := true
-		return isFuncStarted, mdText
+		*mdText = append(*mdText, "---")
+		*mdText = append(*mdText, convertedLine)
+		return true
 	}
-	return false, mdText
+	return false
 }
 
-func addOneLineComment(trimmedLine string, reMarker *regexp.Regexp, mdText []string) []string {
+func addOneLineComment(trimmedLine string, reMarker *regexp.Regexp, mdText *[]string) {
 	convertedLine, isConverted := convertLineComment(trimmedLine, reMarker)
 	if isConverted {
-		mdText = append(mdText, convertedLine)
+		*mdText = append(*mdText, convertedLine)
 	}
-	return mdText
 }
 
-func addTopLinkToFuncEnd(isFuncStarted bool, packageName string, mdText []string) []string {
+func addTopLinkToFuncEnd(isFuncStarted bool, packageName string, mdText *[]string) []string {
 	if isFuncStarted {
 		isFuncStarted = false
-		mdText = append(mdText, "")
-		mdText = append(mdText, getLinkToTop(packageName))
+		*mdText = append(*mdText, "")
+		*mdText = append(*mdText, getLinkToTop(packageName))
 	}
-	return mdText
+	return *mdText
 }
 
 func getLinkToTop(name string) string {

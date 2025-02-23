@@ -10,9 +10,10 @@ func TestInputNil(t *testing.T) {
 	// > Empty Input
 	// # Convert() returns error on 'nil' input
 	// ## WHEN Convert(nil)
-	output, err := Convert(nil)
-	// ## THEN error message: 'nil input'
+	output, toc, err := Convert(nil)
+	// ## THEN error message: 'nil input', table of content is '<empty>'
 	require.Empty(t, output, "msg must be empty")
+	require.Empty(t, toc, "toc must be empty")
 	require.ErrorContains(t, err, "nil input")
 }
 
@@ -22,9 +23,10 @@ func TestInputEmpty(t *testing.T) {
 	// ## GIVEN Input is ""
 	var input = []string{""}
 	// ## WHEN Convert("")
-	output, err := Convert(input)
-	// ## THEN error message: 'empty input'
+	output, toc, err := Convert(input)
+	// ## THEN error message: 'empty input', table of content is '<empty>'
 	require.Empty(t, output, "msg must be empty")
+	require.Empty(t, toc, "toc must be empty")
 	require.ErrorContains(t, err, "empty input")
 }
 
@@ -34,9 +36,10 @@ func TestInputMultiNoComments(t *testing.T) {
 	// ## GIVEN Input contains multi lines without one line comments
 	var input = []string{" something", "", " something else"}
 	// ## WHEN Convert()
-	output, err := Convert(input)
-	// ## THEN output is '<empty>'
+	output, toc, err := Convert(input)
+	// ## THEN output is '<empty>', table of content is '<empty>'
 	require.Empty(t, output, "output must be empty")
+	require.Empty(t, toc, "toc must be empty")
 	require.Empty(t, err, "must be no error")
 }
 
@@ -57,9 +60,10 @@ func TestInputContainsOLCbutNoMarkers(t *testing.T) {
 		OLC + " ##  header",
 	}
 	// ## WHEN Convert()
-	output, err := Convert(input)
-	// ## THEN output is '<empty>'
+	output, toc, err := Convert(input)
+	// ## THEN output is '<empty>', table of content is '<empty>'
 	require.Empty(t, err, "must be no error")
+	require.Empty(t, toc, "toc must be empty")
 	require.Empty(t, output, "output must be empty")
 }
 
@@ -70,10 +74,11 @@ func TestInputScenarioHeader(t *testing.T) {
 	// - "// # Scenario"
 	var input = []string{OLC + " # Scenario"}
 	// ## WHEN Convert()
-	output, err := Convert(input)
+	output, toc, err := Convert(input)
 	// ## THEN output:
 	// - "### Scenario"
 	require.Empty(t, err, "must be no error")
+	require.Empty(t, toc, "toc must be empty")
 	require.Equal(t, []string{"### Scenario"}, output)
 }
 
@@ -84,10 +89,11 @@ func TestInputStepHeader(t *testing.T) {
 	// - "// ## GIVEN"
 	var input = []string{OLC + " ## GIVEN"}
 	// ## WHEN Convert()
-	output, err := Convert(input)
+	output, toc, err := Convert(input)
 	// ## THEN output:
 	// - "#### GIVEN"
 	require.Empty(t, err, "must be no error")
+	require.Empty(t, toc, "toc must be empty")
 	require.Equal(t, []string{"#### GIVEN"}, output)
 }
 
@@ -102,9 +108,10 @@ func TestInputBulletNote(t *testing.T) {
 		OLC + " - Step ",
 	}
 	// ## WHEN Convert()
-	output, err := Convert(input)
+	output, toc, err := Convert(input)
 	// ## THEN output is:
 	require.Empty(t, err, "must be no error")
+	require.Empty(t, toc, "toc must be empty")
 	require.Equal(
 		t,
 		[]string{
@@ -127,9 +134,10 @@ func TestInputBullet2(t *testing.T) {
 		OLC + " --- Step3 ",
 	}
 	// ## WHEN Convert()
-	output, err := Convert(input)
+	output, toc, err := Convert(input)
 	// ## THEN output is:
 	require.Empty(t, err, "must be no error")
+	require.Empty(t, toc, "toc must be empty")
 	require.Equal(t, []string{
 		// - "__- Step2"
 		"  - Step2",
@@ -148,9 +156,10 @@ func TestGoPackageNameAsHeader(t *testing.T) {
 	}
 
 	// ## WHEN Convert()
-	output, err := Convert(input)
+	output, toc, err := Convert(input)
 	// ## THEN output is:
 	require.Empty(t, err, "must be no error")
+	require.Empty(t, toc, "toc must be empty")
 	require.Equal(t, []string{
 		// - "## `somePackage`"
 		"## `somePackage`",
@@ -173,7 +182,7 @@ func TestGoFuncNameAsHeader(t *testing.T) {
 	}
 
 	// ## WHEN Convert()
-	output, err := Convert(input)
+	output, toc, err := Convert(input)
 	// ## THEN output is:
 	require.Empty(t, err, "must be no error")
 	require.Equal(t, []string{
@@ -185,6 +194,8 @@ func TestGoFuncNameAsHeader(t *testing.T) {
 		// - "[top]#top" - link to the top
 		"[top](#top)",
 	}, output)
+	// - table of content is '<empty>'
+	require.Empty(t, toc, "toc must be empty")
 }
 
 func TestGoTwoTestsWithPackage(t *testing.T) {
@@ -205,7 +216,7 @@ func TestGoTwoTestsWithPackage(t *testing.T) {
 	}
 
 	// ## WHEN Convert()
-	output, err := Convert(input)
+	output, toc, err := Convert(input)
 	// ## THEN output is:
 	require.Empty(t, err, "must be no error")
 	require.Equal(t, []string{
@@ -226,4 +237,14 @@ func TestGoTwoTestsWithPackage(t *testing.T) {
 		"",
 		"[top](#somePackage)",
 	}, output)
+	// - table of content is:
+	require.Empty(t, toc, "toc must be empty")
+	/*
+		require.Equal(t, []string{
+			// - "'1. [TestSomething1](#TestSomething1)"
+			"'1. [Scenario1](#TestSomething1)",
+			// - "'1. [TestSomething2](#TestSomething2)"
+			"'1. [Scenario2](#TestSomething2)",
+		}, toc)
+	*/
 }
