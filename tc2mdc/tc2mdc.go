@@ -9,13 +9,25 @@ import (
 
 // One line comment
 const OLC string = "//"
+const (
+	GWT       = 0
+	common    = 1
+	indented  = 2
+	indented2 = 3
+)
+
+type TestStep struct {
+	kind    int
+	comment string
+}
 
 type TestMethod struct {
 	name     string
 	tags     []string
 	scenario string
-	steps    []string
+	steps    []TestStep
 }
+
 type TOCLine struct {
 	index   int
 	caption string
@@ -23,50 +35,107 @@ type TOCLine struct {
 	gitLink string
 }
 
-type MDFile struct {
+type TestData struct {
 	title       string
 	packageName string
 	toc         map[string]TOCLine
 	methods     []TestMethod
 }
 
-// Converts multi line text with one line comments into a MarkDown text
-func Convert(comments []string) ([]string, []string, error) {
-	errorMessage := isInputEmpty(&comments)
-	if errorMessage != "" {
-		return nil, nil, errors.New(errorMessage)
-	}
-	fmt.Println("Start converting...")
+func ConvertDataToMD(data *TestData) []string {
 
-	var packageName string
-	var mdText, toc []string
+	return nil
+}
+
+func Parse(codeLines []string) (*TestData, error) {
+	errorMessage := isInputEmpty(&codeLines)
+	if errorMessage != "" {
+		return nil, errors.New(errorMessage)
+	}
+	fmt.Println("Start parsing...")
+
+	var testData = new(TestData)
 	var isFuncStarted bool
 
 	rePackage, _ := regexp.Compile(`^package\s(?P<name>\w+)`)
 	reFunc, _ := regexp.Compile(`^func\s(?P<name>Test\w+)\(t \*testing\.T\)`)
 	reMarker, _ := regexp.Compile(`^\s(#|##|>|-|--|---)\s[^\s]`) // all MD markers to search for
-	for _, origLine := range comments {
+	for _, origLine := range codeLines {
 		trimmedLine := strings.TrimSpace(origLine)
 		switch {
 		case strings.HasPrefix(origLine, "package"):
 			{
-				packageName = addPackageHeader(origLine, rePackage, &mdText)
+				parsePackageHeader(origLine, rePackage, testData)
 			}
 		case strings.HasPrefix(origLine, "func"): // start of func
 			{
-				isFuncStarted = addFuncHeader(origLine, reFunc, &mdText)
-			}
-		case strings.HasPrefix(origLine, "}"): // end of func
-			{
-				addTopLinkToFuncEnd(isFuncStarted, packageName, &mdText)
+				isFuncStarted = parseFunc(origLine, reFunc, testData)
 			}
 		case strings.HasPrefix(trimmedLine, OLC):
 			{
-				addOneLineComment(trimmedLine, reMarker, &mdText)
+				if isFuncStarted {
+					parseOneLineComment(trimmedLine, reMarker, &(testData.methods[len(testData.methods)-1]))
+				}
+			}
+		case strings.HasPrefix(origLine, "}"): // end of func
+			{
+				isFuncStarted = false
 			}
 		}
 	}
-	return mdText, toc, nil
+	if testData != nil {
+		fmt.Printf("Parsed package %v with %d methods.", testData.packageName, len(testData.methods))
+	}
+	return testData, nil
+}
+
+func parseOneLineComment(line string, re *regexp.Regexp, testMethod *TestMethod) {
+	line = line[len(OLC):] // trim OLC
+	if re.MatchString(line) {
+		marker := re.FindStringSubmatch(line)
+		line = line[1:] // trim a leading space
+		switch marker[1] {
+		case "#":
+			{
+				testMethod.scenario = line[2:]
+			}
+		case ">":
+			{
+				testMethod.tags = splitTags(line)
+			}
+		case "##":
+			{
+				testMethod.steps = append(testMethod.steps, TestStep{GWT, line})
+			}
+		case "-", "--", "---":
+			{
+				testMethod.steps = append(testMethod.steps, TestStep{len(marker[1]), line})
+			}
+		}
+	}
+}
+
+func splitTags(line string) []string {
+	return []string{line}
+}
+
+func parseFunc(origLine string, reFunc *regexp.Regexp, testData *TestData) bool {
+	result := getMatchesMap(reFunc, origLine)
+	funcName := result["name"]
+	if funcName != "" {
+		method := TestMethod{name: funcName}
+		(*testData).methods = append((*testData).methods, method)
+		return true
+	}
+	return false
+}
+
+func parsePackageHeader(origLine string, rePackage *regexp.Regexp, testData *TestData) {
+	result := getMatchesMap(rePackage, origLine)
+	packageName := result["name"]
+	if packageName != "" {
+		(*testData).packageName = packageName
+	}
 }
 
 func isInputEmpty(comments *[]string) string {
@@ -124,11 +193,14 @@ func getLinkToTop(name string) string {
 }
 
 func getMatchesMap(re *regexp.Regexp, line string) map[string]string {
-	header := re.FindStringSubmatch(line)
+	matches := re.FindStringSubmatch(line)
+	if matches == nil {
+		return nil
+	}
 	result := make(map[string]string)
 	for i, name := range re.SubexpNames() {
 		if i != 0 && name != "" {
-			result[name] = header[i]
+			result[name] = matches[i]
 		}
 	}
 	return result

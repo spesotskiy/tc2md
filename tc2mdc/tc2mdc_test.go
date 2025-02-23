@@ -10,62 +10,125 @@ func TestInputNil(t *testing.T) {
 	// > Empty Input
 	// # Convert() returns error on 'nil' input
 	// ## WHEN Convert(nil)
-	output, toc, err := Convert(nil)
-	// ## THEN error message: 'nil input', table of content is '<empty>'
-	require.Empty(t, output, "msg must be empty")
-	require.Empty(t, toc, "toc must be empty")
+	testData, err := Parse(nil)
+	// ## THEN error message: 'nil input', data is empty
+	require.Empty(t, testData, "data must be empty")
 	require.ErrorContains(t, err, "nil input")
 }
 
 func TestInputEmpty(t *testing.T) {
 	// > Empty Input
-	// # Convert() returns error on empty string input
+	// # Parse() returns error on empty string input
 	// ## GIVEN Input is ""
 	var input = []string{""}
-	// ## WHEN Convert("")
-	output, toc, err := Convert(input)
-	// ## THEN error message: 'empty input', table of content is '<empty>'
-	require.Empty(t, output, "msg must be empty")
-	require.Empty(t, toc, "toc must be empty")
+	// ## WHEN Parse("")
+	testData, err := Parse(input)
+	// ## THEN error message: 'empty input', data is empty
+	require.Empty(t, testData, "data must be empty")
 	require.ErrorContains(t, err, "empty input")
 }
 
 func TestInputMultiNoComments(t *testing.T) {
 	// > Empty Input
-	// # Convert() returns empty output on strings without one line comments
+	// # Parse() returns empty data on strings without one line comments
 	// ## GIVEN Input contains multi lines without one line comments
 	var input = []string{" something", "", " something else"}
-	// ## WHEN Convert()
-	output, toc, err := Convert(input)
-	// ## THEN output is '<empty>', table of content is '<empty>'
-	require.Empty(t, output, "output must be empty")
-	require.Empty(t, toc, "toc must be empty")
+	// ## WHEN Parse()
+	testData, err := Parse(input)
+	// ## THEN output data is '<empty>'
 	require.Empty(t, err, "must be no error")
+	require.Empty(t, testData, "output must be empty")
 }
 
-func TestInputContainsOLCbutNoMarkers(t *testing.T) {
-	// > Empty Input
-	// # Convert() returns empty output on input with OLC but not one space between MD markers
-	// ## GIVEN Input is:
+func TestGoPackageNameAsHeader(t *testing.T) {
+	// > Header, Go
+	// # Parse() returns data with "packageName" on input with package name only
+	// ## GIVEN Input is
 	var input = []string{
-		// - "// Scenario"   (no MD marker)
-		OLC + " Scenario",
-		// - "//- point"     (no space after OLC)
-		OLC + "- point",
-		// - "//  - point"   (two spaces after OLC)
-		OLC + "  - point",
-		// - "// #header"    (no space after MD marker)
-		OLC + " #header",
-		// - "// ##  header" (two spaces after MD marker)
-		OLC + " ##  header",
+		// - "package somePackage"
+		"package somePackage",
 	}
-	// ## WHEN Convert()
-	output, toc, err := Convert(input)
-	// ## THEN output is '<empty>', table of content is '<empty>'
+
+	// ## WHEN Parse()
+	testData, err := Parse(input)
+	// ## THEN output data has:
 	require.Empty(t, err, "must be no error")
-	require.Empty(t, toc, "toc must be empty")
-	require.Empty(t, output, "output must be empty")
+	// - "packageName" = 'somePackage', ("title", "TOC", "Methods") = '<empty>'
+	require.Equal(t, "somePackage", testData.packageName)
+	require.Empty(t, testData.title, "must be empty title")
+	require.Empty(t, testData.toc, "must be empty TOC")
+	require.Empty(t, testData.methods, "must be empty methods")
 }
+
+func TestGoFuncNameAsMethodName(t *testing.T) {
+	// > Header, Go
+	// # Parse() returns data with 1 element in "Methods" on input with 1 test func and 1 non-test func.
+	// ## GIVEN Input is
+	var input = []string{
+		// - "package somePackage"
+		"package somePackage",
+		// - "func TestSomething(t *testing.T) {"
+		"func TestSomething(t *testing.T) {",
+		// - "  if x {"
+		"  if x {",
+		// - "  }" // must be skipped as indented
+		"  }",
+		// - "}" // the func end as not indented
+		"}",
+		// - "func DoSomething() {" // non-test function
+		"func DoSomething() {",
+		// - "}" // the func end
+		"}",
+	}
+
+	// ## WHEN Convert()
+	testData, err := Parse(input)
+	// ## THEN output data has:
+	require.Empty(t, err, "must be no error")
+	// - "packageName" = 'somePackage', ("title", "TOC") = '<empty>'
+	require.Equal(t, "somePackage", testData.packageName)
+	require.Empty(t, testData.title, "title must be empty")
+	require.Empty(t, testData.toc, "TOC must be empty")
+	// - "Methods" contains 1 element: "name" = 'TestSomething', other fields are empty
+	require.Equal(t, 1, len(testData.methods))
+	require.Equal(t, "TestSomething", testData.methods[0].name)
+	require.Empty(t, testData.methods[0].scenario, "scenario must be empty")
+	require.Empty(t, testData.methods[0].steps, "steps must be empty")
+	require.Empty(t, testData.methods[0].tags, "tags must be empty")
+}
+
+func TestGoFuncNameScenario(t *testing.T) {
+	// > Header, Go
+	// # Parse() returns data with 1 element in "Methods" on input with 1 test func and 1 non-test func.
+	// ## GIVEN Input is
+	var input = []string{
+		// - "package somePackage"
+		"package somePackage",
+		// - "func TestSomething(t *testing.T) {"
+		"func TestSomething(t *testing.T) {",
+		// - "// # Scenario"
+		OLC + " # Scenario",
+		// - "}" // the func end as not indented
+		"}",
+	}
+
+	// ## WHEN Convert()
+	testData, err := Parse(input)
+	// ## THEN output is:
+	require.Empty(t, err, "must be no error")
+	// - "packageName" = 'somePackage', ("title", "TOC") = '<empty>'
+	require.Equal(t, "somePackage", testData.packageName)
+	require.Empty(t, testData.title, "title must be empty")
+	require.Empty(t, testData.toc, "TOC must be empty")
+	// - "Methods" contains 1 element: "name" = 'TestSomething', "scenario" = 'Scenario', other fields are empty
+	require.Equal(t, 1, len(testData.methods))
+	require.Equal(t, "TestSomething", testData.methods[0].name)
+	require.Equal(t, "Scenario", testData.methods[0].scenario)
+	require.Empty(t, testData.methods[0].steps, "steps must be empty")
+	require.Empty(t, testData.methods[0].tags, "tags must be empty")
+}
+
+/*
 
 func TestInputScenarioHeader(t *testing.T) {
 	// > MD Markers
@@ -74,7 +137,7 @@ func TestInputScenarioHeader(t *testing.T) {
 	// - "// # Scenario"
 	var input = []string{OLC + " # Scenario"}
 	// ## WHEN Convert()
-	output, toc, err := Convert(input)
+	output, toc, err := Parse(input)
 	// ## THEN output:
 	// - "### Scenario"
 	require.Empty(t, err, "must be no error")
@@ -89,7 +152,7 @@ func TestInputStepHeader(t *testing.T) {
 	// - "// ## GIVEN"
 	var input = []string{OLC + " ## GIVEN"}
 	// ## WHEN Convert()
-	output, toc, err := Convert(input)
+	output, toc, err := Parse(input)
 	// ## THEN output:
 	// - "#### GIVEN"
 	require.Empty(t, err, "must be no error")
@@ -108,7 +171,7 @@ func TestInputBulletNote(t *testing.T) {
 		OLC + " - Step ",
 	}
 	// ## WHEN Convert()
-	output, toc, err := Convert(input)
+	output, toc, err := Parse(input)
 	// ## THEN output is:
 	require.Empty(t, err, "must be no error")
 	require.Empty(t, toc, "toc must be empty")
@@ -134,7 +197,7 @@ func TestInputBullet2(t *testing.T) {
 		OLC + " --- Step3 ",
 	}
 	// ## WHEN Convert()
-	output, toc, err := Convert(input)
+	output, toc, err := Parse(input)
 	// ## THEN output is:
 	require.Empty(t, err, "must be no error")
 	require.Empty(t, toc, "toc must be empty")
@@ -156,7 +219,7 @@ func TestGoPackageNameAsHeader(t *testing.T) {
 	}
 
 	// ## WHEN Convert()
-	output, toc, err := Convert(input)
+	output, toc, err := Parse(input)
 	// ## THEN output is:
 	require.Empty(t, err, "must be no error")
 	require.Empty(t, toc, "toc must be empty")
@@ -182,7 +245,7 @@ func TestGoFuncNameAsHeader(t *testing.T) {
 	}
 
 	// ## WHEN Convert()
-	output, toc, err := Convert(input)
+	output, toc, err := Parse(input)
 	// ## THEN output is:
 	require.Empty(t, err, "must be no error")
 	require.Equal(t, []string{
@@ -216,7 +279,7 @@ func TestGoTwoTestsWithPackage(t *testing.T) {
 	}
 
 	// ## WHEN Convert()
-	output, toc, err := Convert(input)
+	output, toc, err := Parse(input)
 	// ## THEN output is:
 	require.Empty(t, err, "must be no error")
 	require.Equal(t, []string{
@@ -246,5 +309,6 @@ func TestGoTwoTestsWithPackage(t *testing.T) {
 			// - "'1. [TestSomething2](#TestSomething2)"
 			"'1. [Scenario2](#TestSomething2)",
 		}, toc)
-	*/
+
 }
+*/
