@@ -24,6 +24,7 @@ func Convert(comments []string) ([]string, error) {
 	var packageName string
 	var mdText []string
 	var isFuncStarted bool
+
 	rePackage, _ := regexp.Compile(`^package\s(?P<name>\w+)`)
 	reFunc, _ := regexp.Compile(`^func\s(?P<name>Test\w+)\(t \*testing\.T\)`)
 	reMarker, _ := regexp.Compile(`^\s(#|##|>|-|--|---)\s[^\s]`) // all MD markers to search for
@@ -32,11 +33,11 @@ func Convert(comments []string) ([]string, error) {
 		switch {
 		case strings.HasPrefix(origLine, "package"):
 			{
-				packageName, mdText = newFunction(rePackage, origLine, mdText)
+				packageName, mdText = addPackageHeader(origLine, rePackage, mdText)
 			}
 		case strings.HasPrefix(origLine, "func"): // start of func
 			{
-				isFuncStarted, mdText = addFuncHeader(reFunc, origLine, mdText)
+				isFuncStarted, mdText = addFuncHeader(origLine, reFunc, mdText)
 			}
 		case strings.HasPrefix(origLine, "}"): // end of func
 			{
@@ -51,7 +52,7 @@ func Convert(comments []string) ([]string, error) {
 	return mdText, nil
 }
 
-func newFunction(rePackage *regexp.Regexp, origLine string, mdText []string) (string, []string) {
+func addPackageHeader(origLine string, rePackage *regexp.Regexp, mdText []string) (string, []string) {
 	result := getMatchesMap(rePackage, origLine)
 	packageName := result["name"]
 	convertedLine := "## `" + packageName + "`"
@@ -61,7 +62,7 @@ func newFunction(rePackage *regexp.Regexp, origLine string, mdText []string) (st
 	return packageName, mdText
 }
 
-func addFuncHeader(reFunc *regexp.Regexp, origLine string, mdText []string) (bool, []string) {
+func addFuncHeader(origLine string, reFunc *regexp.Regexp, mdText []string) (bool, []string) {
 	result := getMatchesMap(reFunc, origLine)
 	convertedLine := "#### `" + result["name"] + "`"
 	if result["name"] != "" {
