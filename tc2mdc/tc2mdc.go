@@ -23,55 +23,71 @@ func Convert(comments []string) ([]string, error) {
 	fmt.Println("Start converting...")
 	var packageName string
 	var mdText []string
-	var trimmedLine, convertedLine string
-	var isConverted, isFuncStarted bool
+	var isFuncStarted bool
 	rePackage, _ := regexp.Compile(`^package\s(?P<name>\w+)`)
 	reFunc, _ := regexp.Compile(`^func\s(?P<name>Test\w+)\(t \*testing\.T\)`)
 	reMarker, _ := regexp.Compile(`^\s(#|##|>|-|--|---)\s[^\s]`) // all MD markers to search for
 	for _, origLine := range comments {
-		trimmedLine = strings.TrimSpace(origLine)
+		trimmedLine := strings.TrimSpace(origLine)
 		switch {
 		case strings.HasPrefix(origLine, "package"):
 			{
-				result := getMatchesMap(rePackage, origLine)
-				packageName = result["name"]
-				convertedLine = "## `" + packageName + "`"
-				isConverted = packageName != ""
-				if isConverted {
-					mdText = append(mdText, convertedLine)
-				}
+				packageName, mdText = newFunction(rePackage, origLine, mdText)
 			}
 		case strings.HasPrefix(origLine, "func"): // start of func
 			{
-				result := getMatchesMap(reFunc, origLine)
-				convertedLine = "#### `" + result["name"] + "`"
-				isConverted = result["name"] != ""
-				if isConverted {
-					mdText = append(mdText, "---")
-					mdText = append(mdText, convertedLine)
-					isFuncStarted = true
-				}
+				isFuncStarted, mdText = addFuncHeader(reFunc, origLine, mdText)
 			}
 		case strings.HasPrefix(origLine, "}"): // end of func
 			{
-				if isFuncStarted {
-					isFuncStarted = false
-					mdText = append(mdText, "")
-					mdText = append(mdText, getLinkToTop(packageName))
-				}
+				mdText = addTopLinkToFuncEnd(isFuncStarted, packageName, mdText)
 			}
 		case strings.HasPrefix(trimmedLine, OLC):
 			{
-				convertedLine, isConverted = convertLineComment(trimmedLine, reMarker)
-				if isConverted {
-					mdText = append(mdText, convertedLine)
-				}
+				mdText = addOneLineComment(trimmedLine, reMarker, mdText)
 			}
-		default:
-			isConverted = false
 		}
 	}
 	return mdText, nil
+}
+
+func newFunction(rePackage *regexp.Regexp, origLine string, mdText []string) (string, []string) {
+	result := getMatchesMap(rePackage, origLine)
+	packageName := result["name"]
+	convertedLine := "## `" + packageName + "`"
+	if packageName != "" {
+		mdText = append(mdText, convertedLine)
+	}
+	return packageName, mdText
+}
+
+func addFuncHeader(reFunc *regexp.Regexp, origLine string, mdText []string) (bool, []string) {
+	result := getMatchesMap(reFunc, origLine)
+	convertedLine := "#### `" + result["name"] + "`"
+	if result["name"] != "" {
+		mdText = append(mdText, "---")
+		mdText = append(mdText, convertedLine)
+		isFuncStarted := true
+		return isFuncStarted, mdText
+	}
+	return false, mdText
+}
+
+func addOneLineComment(trimmedLine string, reMarker *regexp.Regexp, mdText []string) []string {
+	convertedLine, isConverted := convertLineComment(trimmedLine, reMarker)
+	if isConverted {
+		mdText = append(mdText, convertedLine)
+	}
+	return mdText
+}
+
+func addTopLinkToFuncEnd(isFuncStarted bool, packageName string, mdText []string) []string {
+	if isFuncStarted {
+		isFuncStarted = false
+		mdText = append(mdText, "")
+		mdText = append(mdText, getLinkToTop(packageName))
+	}
+	return mdText
 }
 
 func getLinkToTop(name string) string {
