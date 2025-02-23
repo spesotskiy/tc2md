@@ -42,11 +42,6 @@ type TestData struct {
 	methods     []TestMethod
 }
 
-func ConvertDataToMD(data *TestData) []string {
-
-	return nil
-}
-
 func Parse(codeLines []string) (*TestData, error) {
 	errorMessage := isInputEmpty(&codeLines)
 	if errorMessage != "" {
@@ -83,9 +78,7 @@ func Parse(codeLines []string) (*TestData, error) {
 			}
 		}
 	}
-	if testData != nil {
-		fmt.Printf("Parsed package %v with %d methods.", testData.packageName, len(testData.methods))
-	}
+	fmt.Printf("Parsed package %v with %d methods.", testData.packageName, len(testData.methods))
 	return testData, nil
 }
 
@@ -101,22 +94,20 @@ func parseOneLineComment(line string, re *regexp.Regexp, testMethod *TestMethod)
 			}
 		case ">":
 			{
-				testMethod.tags = splitTags(line)
+				for _, tag := range strings.Split(line[2:], ",") {
+					testMethod.tags = append(testMethod.tags, strings.TrimSpace(tag))
+				}
 			}
 		case "##":
 			{
-				testMethod.steps = append(testMethod.steps, TestStep{GWT, line})
+				testMethod.steps = append(testMethod.steps, TestStep{GWT, strings.TrimSpace(line[3:])})
 			}
 		case "-", "--", "---":
 			{
-				testMethod.steps = append(testMethod.steps, TestStep{len(marker[1]), line})
+				testMethod.steps = append(testMethod.steps, TestStep{len(marker[1]), strings.TrimSpace(line[len(marker[1]):])})
 			}
 		}
 	}
-}
-
-func splitTags(line string) []string {
-	return []string{line}
 }
 
 func parseFunc(origLine string, reFunc *regexp.Regexp, testData *TestData) bool {
@@ -148,50 +139,6 @@ func isInputEmpty(comments *[]string) string {
 	return ""
 }
 
-func addPackageHeader(origLine string, rePackage *regexp.Regexp, mdText *[]string) string {
-	result := getMatchesMap(rePackage, origLine)
-	packageName := result["name"]
-	convertedLine := "## `" + packageName + "`"
-	if packageName != "" {
-		*mdText = append(*mdText, convertedLine)
-	}
-	return packageName
-}
-
-func addFuncHeader(origLine string, reFunc *regexp.Regexp, mdText *[]string) bool {
-	result := getMatchesMap(reFunc, origLine)
-	convertedLine := "#### `" + result["name"] + "`"
-	if result["name"] != "" {
-		*mdText = append(*mdText, "---")
-		*mdText = append(*mdText, convertedLine)
-		return true
-	}
-	return false
-}
-
-func addOneLineComment(trimmedLine string, reMarker *regexp.Regexp, mdText *[]string) {
-	convertedLine, isConverted := convertLineComment(trimmedLine, reMarker)
-	if isConverted {
-		*mdText = append(*mdText, convertedLine)
-	}
-}
-
-func addTopLinkToFuncEnd(isFuncStarted bool, packageName string, mdText *[]string) []string {
-	if isFuncStarted {
-		isFuncStarted = false
-		*mdText = append(*mdText, "")
-		*mdText = append(*mdText, getLinkToTop(packageName))
-	}
-	return *mdText
-}
-
-func getLinkToTop(name string) string {
-	if name == "" {
-		name = "top"
-	}
-	return "[top](#" + name + ")"
-}
-
 func getMatchesMap(re *regexp.Regexp, line string) map[string]string {
 	matches := re.FindStringSubmatch(line)
 	if matches == nil {
@@ -204,32 +151,4 @@ func getMatchesMap(re *regexp.Regexp, line string) map[string]string {
 		}
 	}
 	return result
-}
-
-func convertLineComment(line string, re *regexp.Regexp) (string, bool) {
-	line = line[2:] // trim OLC
-	if re.MatchString(line) {
-		marker := re.FindStringSubmatch(line)
-		line = line[1:] // trim a leading space
-		switch marker[1] {
-		case "#", "##":
-			{
-				line = "##" + line
-			}
-		case "-", ">":
-			{
-				// line as is
-			}
-		case "--":
-			{
-				line = "  " + line[1:]
-			}
-		case "---":
-			{
-				line = "    " + line[2:]
-			}
-		}
-		return line, true
-	}
-	return "", false
 }
